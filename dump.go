@@ -288,10 +288,10 @@ func (data *Data) isIncludedTable(name string) bool {
 	} else {
 		for _, item := range data.IgnoreTables {
 			if item == name {
-				return true
+				return false
 			}
 		}
-		return false
+		return true
 	}
 }
 
