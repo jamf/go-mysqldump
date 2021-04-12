@@ -120,6 +120,11 @@ const nullType = "NULL"
 
 // Dump data using struct
 func (data *Data) Dump() error {
+	return data.DumpContext(context.Background())
+}
+
+// DumpContext dump data using context
+func (data *Data) DumpContext(ctx context.Context) error {
 	meta := metaData{
 		DumpVersion: Version,
 	}
@@ -140,7 +145,7 @@ func (data *Data) Dump() error {
 	}
 	defer data.rollback()
 
-	if err := meta.updateServerVersion(data); err != nil {
+	if err := meta.updateServerVersion(ctx, data); err != nil {
 		return err
 	}
 
@@ -148,7 +153,7 @@ func (data *Data) Dump() error {
 		return err
 	}
 
-	tables, err := data.getTables()
+	tables, err := data.getTables(ctx)
 	if err != nil {
 		return err
 	}
@@ -239,10 +244,10 @@ func (data *Data) getTemplates() (err error) {
 	return
 }
 
-func (data *Data) getTables() ([]string, error) {
+func (data *Data) getTables(ctx context.Context) ([]string, error) {
 	tables := make([]string, 0)
 
-	rows, err := data.tx.Query("SHOW TABLES")
+	rows, err := data.tx.QueryContext(ctx, "SHOW TABLES")
 	if err != nil {
 		return tables, err
 	}
@@ -269,9 +274,9 @@ func (data *Data) isIgnoredTable(name string) bool {
 	return false
 }
 
-func (meta *metaData) updateServerVersion(data *Data) (err error) {
+func (meta *metaData) updateServerVersion(ctx context.Context, data *Data) (err error) {
 	var serverVersion sql.NullString
-	err = data.tx.QueryRow("SELECT version()").Scan(&serverVersion)
+	err = data.tx.QueryRowContext(ctx, "SELECT version()").Scan(&serverVersion)
 	meta.ServerVersion = serverVersion.String
 	return
 }
@@ -289,9 +294,9 @@ func (table *table) NameEsc() string {
 	return "`" + table.Name + "`"
 }
 
-func (table *table) CreateSQL() (string, error) {
+func (table *table) CreateSQL(ctx context.Context) (string, error) {
 	var tableReturn, tableSQL sql.NullString
-	if err := table.data.tx.QueryRow("SHOW CREATE TABLE "+table.NameEsc()).Scan(&tableReturn, &tableSQL); err != nil {
+	if err := table.data.tx.QueryRowContext(ctx, "SHOW CREATE TABLE "+table.NameEsc()).Scan(&tableReturn, &tableSQL); err != nil {
 		return "", err
 	}
 
@@ -302,8 +307,8 @@ func (table *table) CreateSQL() (string, error) {
 	return tableSQL.String, nil
 }
 
-func (table *table) initColumnData() error {
-	colInfo, err := table.data.tx.Query("SHOW COLUMNS FROM " + table.NameEsc())
+func (table *table) initColumnData(ctx context.Context) error {
+	colInfo, err := table.data.tx.QueryContext(ctx, "SHOW COLUMNS FROM "+table.NameEsc())
 	if err != nil {
 		return err
 	}
@@ -356,12 +361,12 @@ func (table *table) columnsList() string {
 	return "`" + strings.Join(table.cols, "`, `") + "`"
 }
 
-func (table *table) Init() error {
+func (table *table) Init(ctx context.Context) error {
 	if len(table.values) != 0 {
 		return errors.New("can't init twice")
 	}
 
-	if err := table.initColumnData(); err != nil {
+	if err := table.initColumnData(ctx); err != nil {
 		return err
 	}
 
@@ -371,7 +376,7 @@ func (table *table) Init() error {
 	}
 
 	var err error
-	table.rows, err = table.data.tx.Query("SELECT " + table.columnsList() + " FROM " + table.NameEsc())
+	table.rows, err = table.data.tx.QueryContext(ctx, "SELECT "+table.columnsList()+" FROM "+table.NameEsc())
 	if err != nil {
 		return err
 	}
@@ -415,9 +420,9 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 	return tp.ScanType()
 }
 
-func (table *table) Next() bool {
+func (table *table) Next(ctx context.Context) bool {
 	if table.rows == nil {
-		if err := table.Init(); err != nil {
+		if err := table.Init(ctx); err != nil {
 			table.Err = err
 			return false
 		}
@@ -487,13 +492,13 @@ func (table *table) RowBuffer() *bytes.Buffer {
 	return &b
 }
 
-func (table *table) Stream() <-chan string {
+func (table *table) Stream(ctx context.Context) <-chan string {
 	valueOut := make(chan string, 1)
 	go func() {
 		defer close(valueOut)
 		var insert bytes.Buffer
 
-		for table.Next() {
+		for table.Next(ctx) {
 			b := table.RowBuffer()
 			// Truncate our insert if it won't fit
 			if insert.Len() != 0 && insert.Len()+b.Len() > table.data.MaxAllowedPacket-1 {

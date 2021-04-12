@@ -2,6 +2,7 @@ package mysqldump
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"reflect"
 	"strings"
@@ -50,7 +51,7 @@ func TestGetTablesOk(t *testing.T) {
 
 	mock.ExpectQuery("^SHOW TABLES$").WillReturnRows(rows)
 
-	result, err := data.getTables()
+	result, err := data.getTables(context.TODO())
 	assert.NoError(t, err)
 
 	// we make sure that all expectations were met
@@ -72,7 +73,7 @@ func TestIgnoreTablesOk(t *testing.T) {
 
 	data.IgnoreTables = []string{"Test_Table_1"}
 
-	result, err := data.getTables()
+	result, err := data.getTables(context.TODO())
 	assert.NoError(t, err)
 
 	// we make sure that all expectations were met
@@ -93,7 +94,7 @@ func TestGetTablesNil(t *testing.T) {
 
 	mock.ExpectQuery("^SHOW TABLES$").WillReturnRows(rows)
 
-	result, err := data.getTables()
+	result, err := data.getTables(context.TODO())
 	assert.NoError(t, err)
 
 	// we make sure that all expectations were met
@@ -114,7 +115,7 @@ func TestGetServerVersionOk(t *testing.T) {
 
 	meta := metaData{}
 
-	assert.NoError(t, meta.updateServerVersion(data), "error was not expected while updating stats")
+	assert.NoError(t, meta.updateServerVersion(context.TODO(), data), "error was not expected while updating stats")
 
 	// we make sure that all expectations were met
 	assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
@@ -134,7 +135,7 @@ func TestCreateTableSQLOk(t *testing.T) {
 
 	table := data.createTable("Test_Table")
 
-	result, err := table.CreateSQL()
+	result, err := table.CreateSQL(context.TODO())
 	assert.NoError(t, err)
 
 	// we make sure that all expectations were met
@@ -170,7 +171,7 @@ func TestCreateTableRowValues(t *testing.T) {
 
 	table := data.createTable("test")
 
-	assert.True(t, table.Next())
+	assert.True(t, table.Next(context.TODO()))
 
 	result := table.RowValues()
 	assert.NoError(t, table.Err)
@@ -192,7 +193,7 @@ func TestCreateTableValuesSteam(t *testing.T) {
 
 	table := data.createTable("test")
 
-	s := table.Stream()
+	s := table.Stream(context.TODO())
 	assert.EqualValues(t, "INSERT INTO `test` (`id`, `email`, `name`) VALUES (1,'test@test.de','Test Name 1'),(2,'test2@test.de','Test Name 2');", <-s)
 
 	// we make sure that all expectations were met
@@ -210,7 +211,7 @@ func TestCreateTableValuesSteamSmallPackets(t *testing.T) {
 
 	table := data.createTable("test")
 
-	s := table.Stream()
+	s := table.Stream(context.TODO())
 	assert.EqualValues(t, "INSERT INTO `test` (`id`, `email`, `name`) VALUES (1,'test@test.de','Test Name 1');", <-s)
 	assert.EqualValues(t, "INSERT INTO `test` (`id`, `email`, `name`) VALUES (2,'test2@test.de','Test Name 2');", <-s)
 
@@ -239,7 +240,7 @@ func TestCreateTableAllValuesWithNil(t *testing.T) {
 	table := data.createTable("test")
 
 	results := make([]string, 0)
-	for table.Next() {
+	for table.Next(context.TODO()) {
 		row := table.RowValues()
 		assert.NoError(t, table.Err)
 		results = append(results, row)
