@@ -26,6 +26,7 @@ type Data struct {
 	Out              io.Writer
 	Connection       *sql.DB
 	IgnoreTables     []string
+	IncludeTables    []string
 	MaxAllowedPacket int
 	LockTables       bool
 
@@ -34,6 +35,7 @@ type Data struct {
 	tableTmpl  *template.Template
 	footerTmpl *template.Template
 	err        error
+	ctx        context.Context
 }
 
 type table struct {
@@ -100,7 +102,7 @@ const tableTmpl = `
 DROP TABLE IF EXISTS {{ .NameEsc }};
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
  SET character_set_client = utf8mb4 ;
-{{ .CreateSQL }};
+{{ .CreateSQL .Data.Context }};
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -109,7 +111,7 @@ DROP TABLE IF EXISTS {{ .NameEsc }};
 
 LOCK TABLES {{ .NameEsc }} WRITE;
 /*!40000 ALTER TABLE {{ .NameEsc }} DISABLE KEYS */;
-{{ range $value := .Stream }}
+{{ range $value := .Stream .Data.Context }}
 {{- $value }}
 {{ end -}}
 /*!40000 ALTER TABLE {{ .NameEsc }} ENABLE KEYS */;
@@ -120,11 +122,12 @@ const nullType = "NULL"
 
 // Dump data using struct
 func (data *Data) Dump() error {
-	return data.DumpContext(context.Background())
+	return data.DumpContext(context.TODO())
 }
 
 // DumpContext dump data using context
 func (data *Data) DumpContext(ctx context.Context) error {
+	data.ctx = ctx
 	meta := metaData{
 		DumpVersion: Version,
 	}
@@ -223,6 +226,14 @@ func (data *Data) writeTable(table *table) error {
 	return table.Err
 }
 
+// Context gets the data context or a TODO context if not set
+func (data *Data) Context() context.Context {
+	if data.ctx == nil {
+		return context.TODO()
+	}
+	return data.ctx
+}
+
 // MARK: get methods
 
 // getTemplates initializes the templates on data from the constants in this file
@@ -258,20 +269,30 @@ func (data *Data) getTables(ctx context.Context) ([]string, error) {
 		if err := rows.Scan(&table); err != nil {
 			return tables, err
 		}
-		if table.Valid && !data.isIgnoredTable(table.String) {
+		if table.Valid && data.isIncludedTable(table.String) {
 			tables = append(tables, table.String)
 		}
 	}
 	return tables, rows.Err()
 }
 
-func (data *Data) isIgnoredTable(name string) bool {
-	for _, item := range data.IgnoreTables {
-		if item == name {
-			return true
+func (data *Data) isIncludedTable(name string) bool {
+	// IncludeTables overrides IgnoreTables.. if set.  otherwise check against ignored tables
+	if data.IncludeTables != nil {
+		for _, item := range data.IncludeTables {
+			if item == name {
+				return true
+			}
 		}
+		return false
+	} else {
+		for _, item := range data.IgnoreTables {
+			if item == name {
+				return true
+			}
+		}
+		return false
 	}
-	return false
 }
 
 func (meta *metaData) updateServerVersion(ctx context.Context, data *Data) (err error) {
@@ -305,6 +326,10 @@ func (table *table) CreateSQL(ctx context.Context) (string, error) {
 	}
 
 	return tableSQL.String, nil
+}
+
+func (table *table) Data() *Data {
+	return table.data
 }
 
 func (table *table) initColumnData(ctx context.Context) error {

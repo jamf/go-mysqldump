@@ -50,6 +50,15 @@ func Dump(db *sql.DB, out io.Writer) error {
 	}).Dump()
 }
 
+// DumpTables Creates a MYSQL dump of the specified tables from the connection to the stream.
+func DumpTables(db *sql.DB, out io.Writer, tables []string) error {
+	return (&Data{
+		Connection:    db,
+		Out:           out,
+		IncludeTables: tables,
+	}).Dump()
+}
+
 // Close the dumper.
 // Will also close the database the dumper is connected to as well as the out stream if it has a Close method.
 //
