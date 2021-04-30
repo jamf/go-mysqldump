@@ -1,6 +1,7 @@
 package mysqldump
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"io"
@@ -48,6 +49,14 @@ func Dump(db *sql.DB, out io.Writer) error {
 		Connection: db,
 		Out:        out,
 	}).Dump()
+}
+
+// DumpWithContext takes a context and creates a MYSQL dump from the connection to the stream.
+func DumpWithContext(ctx context.Context, db *sql.DB, out io.Writer) error {
+	return (&Data{
+		Connection: db,
+		Out:        out,
+	}).DumpContext(ctx)
 }
 
 // DumpTables Creates a MYSQL dump of the specified tables from the connection to the stream.
