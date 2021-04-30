@@ -1,4 +1,4 @@
-module github.com/jamf/go-mysqldump
+module github.com/jesseaukeman/go-mysqldump
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
