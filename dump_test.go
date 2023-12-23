@@ -228,7 +228,7 @@ func TestCreateTableAllValuesWithNil(t *testing.T) {
 		AddRow("email", "").
 		AddRow("name", "")
 
-	rows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", ""), c("name", "")).
+	rows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", sql.NullString{}), c("name", "")).
 		AddRow(1, nil, "Test Name 1").
 		AddRow(2, "test2@test.de", "Test Name 2").
 		AddRow(3, "", "Test Name 3")
@@ -266,7 +266,7 @@ func TestCreateTableOk(t *testing.T) {
 		AddRow("email", "").
 		AddRow("name", "")
 
-	createTableValueRows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", ""), c("name", "")).
+	createTableValueRows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", sql.NullString{}), c("name", "")).
 		AddRow(1, nil, "Test Name 1").
 		AddRow(2, "test2@test.de", "Test Name 2")
 
@@ -294,7 +294,7 @@ func TestCreateTableOk(t *testing.T) {
 
 DROP TABLE IF EXISTS ~Test_Table~;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
- SET character_set_client = utf8mb4 ;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE 'Test_Table' (~id~ int(11) NOT NULL AUTO_INCREMENT,~s~ char(60) DEFAULT NULL, PRIMARY KEY (~id~))ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -325,7 +325,7 @@ func TestCreateTableOkSmallPackets(t *testing.T) {
 		AddRow("email", "").
 		AddRow("name", "")
 
-	createTableValueRows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", ""), c("name", "")).
+	createTableValueRows := sqlmock.NewRowsWithColumnDefinition(c("id", 0), c("email", sql.NullString{}), c("name", "")).
 		AddRow(1, nil, "Test Name 1").
 		AddRow(2, "test2@test.de", "Test Name 2")
 
@@ -353,7 +353,7 @@ func TestCreateTableOkSmallPackets(t *testing.T) {
 
 DROP TABLE IF EXISTS ~Test_Table~;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
- SET character_set_client = utf8mb4 ;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE 'Test_Table' (~id~ int(11) NOT NULL AUTO_INCREMENT,~s~ char(60) DEFAULT NULL, PRIMARY KEY (~id~))ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

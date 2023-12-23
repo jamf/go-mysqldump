@@ -18,7 +18,7 @@ Register a new dumper.
 */
 func Register(db *sql.DB, dir, format string) (*Data, error) {
 	if !isDir(dir) {
-		return nil, errors.New("Invalid directory")
+		return nil, errors.New("invalid directory")
 	}
 
 	name := time.Now().Format(format)
