@@ -533,7 +533,7 @@ func (table *table) RowBuffer() *bytes.Buffer {
 			}
 		case *sql.NullTime:
 			if s.Valid {
-				fmt.Fprintf(&b, "'%s'", s.Time.Format("2006-01-02 15:04:05"))
+				fmt.Fprintf(&b, "'%s'", s.Time.Format(time.RFC3339))
 			} else {
 				b.WriteString(nullType)
 			}
