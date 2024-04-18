@@ -24,6 +24,7 @@ Data struct to configure dump behavior
 */
 type Data struct {
 	Out              io.Writer
+	FileName         string
 	Connection       *sql.DB
 	IgnoreTables     []string
 	MaxAllowedPacket int

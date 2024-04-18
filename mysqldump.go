@@ -31,13 +31,13 @@ func Register(db *sql.DB, dir, format string) (*Data, error) {
 
 	// Create .sql file
 	f, err := os.Create(p)
-
 	if err != nil {
 		return nil, err
 	}
 
 	return &Data{
 		Out:        f,
+		FileName:   f.Name(),
 		Connection: db,
 	}, nil
 }
