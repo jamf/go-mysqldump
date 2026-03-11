@@ -46,7 +46,6 @@ func c(name string, v interface{}) *sqlmock.Column {
 func TestGetTablesOk(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
-	defer data.Close()
 
 	data.Opts.Schema = "Testdb"
 
@@ -69,7 +68,6 @@ func TestGetTablesOk(t *testing.T) {
 func TestIgnoreTablesOk(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
-	defer data.Close()
 
 	data.Opts.Schema = "Testdb"
 	data.Opts.IgnoreTables = []string{"Test_Table_1"}
@@ -92,7 +90,6 @@ func TestIgnoreTablesOk(t *testing.T) {
 func TestGetTablesWithPrefix(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	data.Opts.Schema = "Testdb"
 	data.Opts.TablePrefix = "wp_"
@@ -114,7 +111,6 @@ func TestGetTablesWithPrefix(t *testing.T) {
 func TestGetTablesWithSuffix(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	data.Opts.Schema = "Testdb"
 	data.Opts.TableSuffix = "_backup"
@@ -134,7 +130,6 @@ func TestGetTablesWithSuffix(t *testing.T) {
 func TestGetTablesWithPrefixAndSuffix(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	data.Opts.Schema = "Testdb"
 	data.Opts.TablePrefix = "pre_"
@@ -156,7 +151,6 @@ func TestGetTablesWithPrefixAndSuffix(t *testing.T) {
 func TestGetTablesComprehensiveFiltering(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	// Настраиваем жесткие фильтры
 	data.Opts.Schema = "TargetDB"
@@ -189,7 +183,6 @@ func TestGetTablesComprehensiveFiltering(t *testing.T) {
 func TestGetTablesNoMatches(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	data.Opts.Schema = "EmptyDB"
 
@@ -205,7 +198,6 @@ func TestGetTablesNoMatches(t *testing.T) {
 func TestWriteTableView(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	var buf bytes.Buffer
 	data.Out = &buf
@@ -230,7 +222,6 @@ func TestWriteTableView(t *testing.T) {
 func TestVirtualColumnsExclusion(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	// id is regular, full_name is VIRTUAL
 	colInfo := sqlmock.NewRows([]string{"Field", "Extra"}).
@@ -251,7 +242,6 @@ func TestVirtualColumnsExclusion(t *testing.T) {
 func TestBinaryDataHandling(t *testing.T) {
 	data, _, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	table := &table{
 		data:   data,
@@ -266,7 +256,6 @@ func TestBinaryDataHandling(t *testing.T) {
 func TestGetServerVersionOk(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	rows := sqlmock.NewRows([]string{"Version()"}).AddRow("test_version")
 	mock.ExpectQuery("^SELECT version()").WillReturnRows(rows)
@@ -279,7 +268,6 @@ func TestGetServerVersionOk(t *testing.T) {
 func TestCreateSQLSQLOk(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	rows := sqlmock.NewRows([]string{"Table", "Create Table"}).
 		AddRow("Test_Table", "CREATE TABLE `Test_Table` (id int)")
@@ -307,7 +295,6 @@ func mockTableSelect(mock sqlmock.Sqlmock, name string) {
 func TestCreateTableValuesSteam(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err)
-	defer data.Close()
 
 	mockTableSelect(mock, "test")
 	data.Opts.MaxAllowedPacket = 4096

@@ -143,7 +143,7 @@ DROP VIEW IF EXISTS {{ .NameEsc }};
 const nullType = "NULL"
 
 // Dump data using struct
-func (data *Data) Dump() error {
+func (data *Data) dump() error {
 	meta := metaData{
 		DumpVersion: Version,
 	}

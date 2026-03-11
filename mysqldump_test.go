@@ -2,7 +2,7 @@ package mysqldump_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -122,10 +122,10 @@ func RunDump(t testing.TB, data *mysqldump.Data) {
 	mock.ExpectQuery("^SELECT (.+) FROM `Test_Table`$").WillReturnRows(createTableValueRows)
 	mock.ExpectRollback()
 
-	assert.NoError(t, data.Dump(), "an error was not expected when dumping a stub database connection")
+	assert.NoError(t, data.MakeDump(data.Out), "an error was not expected when dumping a stub database connection")
 }
 
-func TestRegister(t *testing.T) {
+func TestInit(t *testing.T) {
 	config := mysql.Config{User: "test"}
 	opts := mysqldump.TableOptions{Schema: "db"}
 
@@ -135,7 +135,7 @@ func TestRegister(t *testing.T) {
 	assert.Equal(t, "db", dumper.Opts.Schema)
 }
 
-func TestDumpWithRegister(t *testing.T) {
+func TestMakeDump(t *testing.T) {
 	var buf bytes.Buffer
 	config := mysql.Config{User: "test"}
 	opts := mysqldump.TableOptions{LockTables: true}
@@ -145,17 +145,17 @@ func TestDumpWithRegister(t *testing.T) {
 
 	RunDump(t, dumper)
 
-	result := strings.Replace(strings.Split(buf.String(), "-- Dump completed")[0], "`", "~", -1)
-	expectedTrimmed := strings.Replace(strings.Split(expected, "-- Dump completed")[0], "`", "~", -1)
+	result := strings.ReplaceAll(strings.Split(buf.String(), "-- Dump completed")[0], "`", "~")
+	expectedTrimmed := strings.ReplaceAll(strings.Split(expected, "-- Dump completed")[0], "`", "~")
 
 	assert.Equal(t, expectedTrimmed, result)
 }
 
-func BenchmarkDump(b *testing.B) {
+func BenchmarkMakeDump(b *testing.B) {
 	config := mysql.Config{}
 	opts := mysqldump.TableOptions{LockTables: true}
 	dumper, _ := mysqldump.Init(config, opts)
-	dumper.Out = ioutil.Discard
+	dumper.Out = io.Discard
 
 	for i := 0; i < b.N; i++ {
 		RunDump(b, dumper)

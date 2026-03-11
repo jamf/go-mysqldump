@@ -8,8 +8,8 @@ This example uses the mysql driver (https://github.com/go-sql-driver/mysql) to c
 	package main
 
 	import (
-	    "database/sql"
 	    "fmt"
+	    "os"
 
 	    "github.com/Naumovets/go-mysqldump"
 	    "github.com/go-sql-driver/mysql"
@@ -24,32 +24,28 @@ This example uses the mysql driver (https://github.com/go-sql-driver/mysql) to c
 	    config.Net = "tcp"
 	    config.Addr = "your-hostname:your-port"
 
-	    dumpDir := "dumps"  // you should create this directory
-	    dumpFilenameFormat := fmt.Sprintf("%s-20060102T150405", dbname)   // accepts time layout string and add .sql at the end of file
-
-	    db, err := sql.Open("mysql", config.FormatDNS())
+	    // Initialise dumper with database configuration
+	    dumper, err := mysqldump.Init(*config, mysqldump.TableOptions{})
 	    if err != nil {
-	        fmt.Println("Error opening database: ", err)
+	        fmt.Println("Error initialising dumper:", err)
 	        return
 	    }
 
-	    // Register database with mysqldump
-	    dumper, err := mysqldump.Register(db, dumpDir, dumpFilenameFormat)
+	    // Create output file
+	    f, err := os.Create("dump.sql")
 	    if err != nil {
-	        fmt.Println("Error registering databse:", err)
+	        fmt.Println("Error creating file:", err)
 	        return
 	    }
+	    defer f.Close()
 
 	    // Dump database to file
-	    resultFilename, err := dumper.Dump()
+	    err = dumper.MakeDump(f)
 	    if err != nil {
 	        fmt.Println("Error dumping:", err)
 	        return
 	    }
-	    fmt.Printf("File is saved to %s", resultFilename)
-
-	    // Close dumper, connected database and file stream.
-	    dumper.Close()
+	    fmt.Printf("File is saved to dump.sql")
 	}
 */
 package mysqldump
