@@ -11,23 +11,34 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
 )
 
+type TableOptions struct {
+	Schema           string
+	TableSuffix      string
+	TablePrefix      string
+	IgnoreTables     []string
+	MaxAllowedPacket int
+	LockTables       bool
+}
+
 /*
-Data struct to configure dump behavior
+Data struct to Configure dump behavior
 
 	Out:              Stream to write to
-	Connection:       Database connection to dump
+	Connection:       Database Connection to dump
 	IgnoreTables:     Mark sensitive tables to ignore
 	MaxAllowedPacket: Sets the largest packet size to use in backups
 	LockTables:       Lock all tables for the duration of the dump
 */
 type Data struct {
-	Out              io.Writer
-	Connection       *sql.DB
-	IgnoreTables     []string
-	MaxAllowedPacket int
-	LockTables       bool
+	Out        io.Writer
+	Connection *sql.DB
+
+	Config mysql.Config
+	Opts   TableOptions
 
 	tx         *sql.Tx
 	headerTmpl *template.Template
@@ -137,8 +148,8 @@ func (data *Data) Dump() error {
 		DumpVersion: Version,
 	}
 
-	if data.MaxAllowedPacket == 0 {
-		data.MaxAllowedPacket = defaultMaxAllowedPacket
+	if data.Opts.MaxAllowedPacket == 0 {
+		data.Opts.MaxAllowedPacket = defaultMaxAllowedPacket
 	}
 
 	if err := data.getTemplates(); err != nil {
@@ -167,7 +178,7 @@ func (data *Data) Dump() error {
 	}
 
 	// Lock all tables before dumping if present
-	if data.LockTables && len(tables) > 0 {
+	if data.Opts.LockTables && len(tables) > 0 {
 		var b bytes.Buffer
 		b.WriteString("LOCK TABLES ")
 		for index, table := range tables {
@@ -265,8 +276,16 @@ func (data *Data) getTemplates() (err error) {
 
 func (data *Data) getTables() ([]*table, error) {
 	tables := make([]*table, 0)
+	var query string
 
-	rows, err := data.tx.Query("SHOW FULL TABLES")
+	if len(data.Opts.Schema) != 0 {
+		query = fmt.Sprintf("SELECT table_name, table_type FROM information_schema.tables WHERE table_schema = '%s' AND table_name LIKE '%s'", data.Opts.Schema, (data.Opts.TablePrefix + "%%" + data.Opts.TableSuffix))
+	} else {
+		query = fmt.Sprintf("SELECT table_name, table_type FROM information_schema.tables WHERE table_name LIKE '%s'", (data.Opts.TablePrefix + "%%" + data.Opts.TableSuffix))
+
+	}
+
+	rows, err := data.tx.Query(query)
 	if err != nil {
 		return tables, err
 	}
@@ -287,7 +306,7 @@ func (data *Data) getTables() ([]*table, error) {
 }
 
 func (data *Data) isIgnoredTable(name string) bool {
-	for _, item := range data.IgnoreTables {
+	for _, item := range data.Opts.IgnoreTables {
 		if item == name {
 			return true
 		}
@@ -549,7 +568,7 @@ func (table *table) Stream() <-chan string {
 		for table.Next() {
 			b := table.RowBuffer()
 			// Truncate our insert if it won't fit
-			if insert.Len() != 0 && insert.Len()+b.Len() > table.data.MaxAllowedPacket-1 {
+			if insert.Len() != 0 && insert.Len()+b.Len() > table.data.Opts.MaxAllowedPacket-1 {
 				insert.WriteString(";")
 				valueOut <- insert.String()
 				insert.Reset()
