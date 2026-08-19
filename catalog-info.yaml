@@ -8,5 +8,5 @@ metadata:
 spec:
   type: library 
   lifecycle: production
-  owner: deerstalker
+  owner: ocelots
   system: deerstalker-tools
