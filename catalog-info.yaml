@@ -9,4 +9,4 @@ spec:
   type: library 
   lifecycle: production
   owner: ocelots
-  system: deerstalker-tools
+  system: ocelots-tools
