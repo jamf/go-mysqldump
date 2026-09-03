@@ -4,9 +4,9 @@ metadata:
   name: go-mysqldump
   description: instructions to create MySQL dumps
   labels:
-    jira-key: JPXI
+    jira-key: OCLT
 spec:
   type: library 
   lifecycle: production
-  owner: deerstalker
-  system: deerstalker-tools
+  owner: ocelots
+  system: ocelots-tools
