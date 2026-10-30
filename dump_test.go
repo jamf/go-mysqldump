@@ -45,11 +45,11 @@ func TestGetTablesOk(t *testing.T) {
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
 	defer data.Close()
 
-	rows := sqlmock.NewRows([]string{"Tables_in_Testdb"}).
-		AddRow("Test_Table_1").
-		AddRow("Test_Table_2")
+	rows := sqlmock.NewRows([]string{"Tables_in_Testdb", "Table_type"}).
+		AddRow("Test_Table_1", "BASE TABLE").
+		AddRow("Test_Table_2", "BASE TABLE")
 
-	mock.ExpectQuery("^SHOW TABLES$").WillReturnRows(rows)
+	mock.ExpectQuery("^SHOW FULL TABLES$").WillReturnRows(rows)
 
 	result, err := data.getTables()
 	assert.NoError(t, err)
@@ -57,7 +57,7 @@ func TestGetTablesOk(t *testing.T) {
 	// we make sure that all expectations were met
 	assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
 
-	assert.EqualValues(t, []string{"Test_Table_1", "Test_Table_2"}, result)
+	assert.EqualValues(t, []string{"Test_Table_1", "Test_Table_2"}, tableNames(result))
 }
 
 func TestIgnoreTablesOk(t *testing.T) {
@@ -65,11 +65,11 @@ func TestIgnoreTablesOk(t *testing.T) {
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
 	defer data.Close()
 
-	rows := sqlmock.NewRows([]string{"Tables_in_Testdb"}).
-		AddRow("Test_Table_1").
-		AddRow("Test_Table_2")
+	rows := sqlmock.NewRows([]string{"Tables_in_Testdb", "Table_type"}).
+		AddRow("Test_Table_1", "BASE TABLE").
+		AddRow("Test_Table_2", "BASE TABLE")
 
-	mock.ExpectQuery("^SHOW TABLES$").WillReturnRows(rows)
+	mock.ExpectQuery("^SHOW FULL TABLES$").WillReturnRows(rows)
 
 	data.IgnoreTables = []string{"Test_Table_1"}
 
@@ -79,7 +79,7 @@ func TestIgnoreTablesOk(t *testing.T) {
 	// we make sure that all expectations were met
 	assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
 
-	assert.EqualValues(t, []string{"Test_Table_2"}, result)
+	assert.EqualValues(t, []string{"Test_Table_2"}, tableNames(result))
 }
 
 func TestGetTablesNil(t *testing.T) {
@@ -87,12 +87,12 @@ func TestGetTablesNil(t *testing.T) {
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
 	defer data.Close()
 
-	rows := sqlmock.NewRows([]string{"Tables_in_Testdb"}).
-		AddRow("Test_Table_1").
-		AddRow(nil).
-		AddRow("Test_Table_3")
+	rows := sqlmock.NewRows([]string{"Tables_in_Testdb", "Table_type"}).
+		AddRow("Test_Table_1", "BASE TABLE").
+		AddRow(nil, "BASE TABLE").
+		AddRow("Test_Table_3", "BASE TABLE")
 
-	mock.ExpectQuery("^SHOW TABLES$").WillReturnRows(rows)
+	mock.ExpectQuery("^SHOW FULL TABLES$").WillReturnRows(rows)
 
 	result, err := data.getTables()
 	assert.NoError(t, err)
@@ -100,7 +100,15 @@ func TestGetTablesNil(t *testing.T) {
 	// we make sure that all expectations were met
 	assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
 
-	assert.EqualValues(t, []string{"Test_Table_1", "Test_Table_3"}, result)
+	assert.EqualValues(t, []string{"Test_Table_1", "Test_Table_3"}, tableNames(result))
+}
+
+func tableNames(tables []*table) []string {
+	names := make([]string, 0, len(tables))
+	for _, t := range tables {
+		names = append(names, t.Name)
+	}
+	return names
 }
 
 func TestGetServerVersionOk(t *testing.T) {
