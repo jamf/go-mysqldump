@@ -133,7 +133,7 @@ func TestCreateSQLSQLOk(t *testing.T) {
 
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnRows(rows)
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	result, err := table.CreateSQL()
 	assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestCreateSQLQueryFail(t *testing.T) {
 	queryError := errors.New("query failure")
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnError(queryError)
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	result, err := table.CreateSQL()
 	assert.Error(t, err)
@@ -182,7 +182,7 @@ func TestCreateSQLWrongTable(t *testing.T) {
 
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnRows(rows)
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	result, err := table.CreateSQL()
 	assert.Error(t, err)
@@ -209,7 +209,7 @@ func TestCreateTableInvalidColumns(t *testing.T) {
 
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnRows(rows)
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	result, err := table.CreateSQL()
 	assert.Error(t, err)
@@ -246,7 +246,7 @@ func TestCreateTableRowValues(t *testing.T) {
 
 	mockTableSelect(mock, "test")
 
-	table := data.createTable("test")
+	table := data.createTable("test", false)
 
 	assert.True(t, table.Next())
 
@@ -268,7 +268,7 @@ func TestCreateTableValuesSteam(t *testing.T) {
 
 	data.MaxAllowedPacket = 4096
 
-	table := data.createTable("test")
+	table := data.createTable("test", false)
 
 	s := table.Stream()
 	assert.EqualValues(t, "INSERT INTO `test` (`id`, `email`, `name`) VALUES (1,'test@test.de','Test Name 1'),(2,'test2@test.de','Test Name 2');", <-s)
@@ -286,7 +286,7 @@ func TestCreateTableValuesSteamSmallPackets(t *testing.T) {
 
 	data.MaxAllowedPacket = 64
 
-	table := data.createTable("test")
+	table := data.createTable("test", false)
 
 	s := table.Stream()
 	assert.EqualValues(t, "INSERT INTO `test` (`id`, `email`, `name`) VALUES (1,'test@test.de','Test Name 1');", <-s)
@@ -314,7 +314,7 @@ func TestCreateTableAllValuesWithNil(t *testing.T) {
 	mock.ExpectQuery("^SHOW COLUMNS FROM `test`$").WillReturnRows(cols)
 	mock.ExpectQuery("^SELECT (.+) FROM `test`$").WillReturnRows(rows)
 
-	table := data.createTable("test")
+	table := data.createTable("test", false)
 
 	results := make([]string, 0)
 	for table.Next() {
@@ -368,7 +368,7 @@ func TestCreateTableEmptyValuesByColumnType(t *testing.T) {
 			mock.ExpectQuery("^SHOW COLUMNS FROM `test`$").WillReturnRows(cols)
 			mock.ExpectQuery("^SELECT (.+) FROM `test`$").WillReturnRows(rows)
 
-			table := data.createTable("test")
+			table := data.createTable("test", false)
 
 			results := make([]string, 0)
 			for table.Next() {
@@ -426,7 +426,7 @@ func TestCreateTableOk(t *testing.T) {
 
 	assert.NoError(t, data.getTemplates())
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	data.writeTable(table)
 
@@ -485,7 +485,7 @@ func TestCreateTableOkSmallPackets(t *testing.T) {
 
 	assert.NoError(t, data.getTemplates())
 
-	table := data.createTable("Test_Table")
+	table := data.createTable("Test_Table", false)
 
 	data.writeTable(table)
 
