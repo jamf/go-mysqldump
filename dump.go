@@ -56,7 +56,7 @@ type metaData struct {
 
 const (
 	// Version of this plugin for easy reference
-	Version = "0.7.0"
+	Version = "0.8.2"
 
 	defaultMaxAllowedPacket = 4194304
 )
@@ -454,9 +454,9 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 
 	// determine by name
 	switch tp.DatabaseTypeName() {
-	case "BLOB", "BINARY":
-		return reflect.TypeOf(sql.RawBytes{})
-	case "VARCHAR", "TEXT", "DECIMAL", "JSON":
+	case "BLOB", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB", "BINARY", "VARBINARY":
+		return reflect.TypeOf(nullBytes{})
+	case "CHAR", "VARCHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "ENUM", "SET", "DECIMAL", "JSON":
 		return reflect.TypeOf(sql.NullString{})
 	case "BIGINT", "TINYINT", "INT":
 		return reflect.TypeOf(sql.NullInt64{})
@@ -465,7 +465,31 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 	}
 
 	// unknown datatype
+	if tp.ScanType() == reflect.TypeOf(sql.RawBytes{}) {
+		return reflect.TypeOf(nullBytes{})
+	}
 	return tp.ScanType()
+}
+
+// nullBytes is a nullable byte slice. Scan copies src because the driver
+// reuses its row buffer on the next call to rows.Next.
+type nullBytes struct {
+	Bytes []byte
+	Valid bool
+}
+
+func (n *nullBytes) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case nil:
+		n.Bytes, n.Valid = n.Bytes[:0], false
+	case []byte:
+		n.Bytes, n.Valid = append(n.Bytes[:0], v...), true
+	case string:
+		n.Bytes, n.Valid = append(n.Bytes[:0], v...), true
+	default:
+		return fmt.Errorf("unsupported type %T for binary column", src)
+	}
+	return nil
 }
 
 func (table *table) Next() bool {
@@ -525,11 +549,14 @@ func (table *table) RowBuffer() *bytes.Buffer {
 			} else {
 				b.WriteString(nullType)
 			}
-		case *sql.RawBytes:
-			if len(*s) == 0 {
+		case *nullBytes:
+			switch {
+			case !s.Valid:
 				b.WriteString(nullType)
-			} else {
-				fmt.Fprintf(&b, "_binary '%s'", sanitize(string(*s)))
+			case len(s.Bytes) == 0:
+				b.WriteString("''")
+			default:
+				fmt.Fprintf(&b, "_binary '%s'", sanitize(string(s.Bytes)))
 			}
 		default:
 			fmt.Fprintf(&b, "'%s'", value)

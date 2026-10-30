@@ -331,6 +331,74 @@ func TestCreateTableAllValuesWithNil(t *testing.T) {
 	assert.EqualValues(t, expectedResults, results)
 }
 
+func TestCreateTableEmptyValuesByColumnType(t *testing.T) {
+	tests := []struct {
+		dbType   string
+		value    string
+		expected []string
+	}{
+		{"CHAR", "it's", []string{"('')", "(NULL)", "('it\\'s')", "('')"}},
+		{"VARCHAR", "it's", []string{"('')", "(NULL)", "('it\\'s')", "('')"}},
+		{"TEXT", "a\\b", []string{"('')", "(NULL)", "('a\\\\b')", "('')"}},
+		{"MEDIUMTEXT", "x", []string{"('')", "(NULL)", "('x')", "('')"}},
+		{"ENUM", "x", []string{"('')", "(NULL)", "('x')", "('')"}},
+		{"SET", "x", []string{"('')", "(NULL)", "('x')", "('')"}},
+		{"VARBINARY", "x", []string{"('')", "(NULL)", "(_binary 'x')", "('')"}},
+		{"BLOB", "it's", []string{"('')", "(NULL)", "(_binary 'it\\'s')", "('')"}},
+		{"GEOMETRY", "x", []string{"('')", "(NULL)", "(_binary 'x')", "('')"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dbType, func(t *testing.T) {
+			data, mock, err := getMockData()
+			assert.NoError(t, err, "an error was not expected when opening a stub database connection")
+			defer data.Close()
+
+			cols := sqlmock.NewRows([]string{"Field", "Extra"}).
+				AddRow("v", "")
+
+			// go-sql-driver reports sql.RawBytes as the scan type of every string-family column.
+			col := sqlmock.NewColumn("v").OfType(tt.dbType, sql.RawBytes{}).Nullable(true)
+			rows := sqlmock.NewRowsWithColumnDefinition(col).
+				AddRow("").
+				AddRow(nil).
+				AddRow(tt.value).
+				AddRow("")
+
+			mock.ExpectQuery("^SHOW COLUMNS FROM `test`$").WillReturnRows(cols)
+			mock.ExpectQuery("^SELECT (.+) FROM `test`$").WillReturnRows(rows)
+
+			table := data.createTable("test")
+
+			results := make([]string, 0)
+			for table.Next() {
+				results = append(results, table.RowValues())
+			}
+			assert.NoError(t, table.Err)
+			assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
+			assert.EqualValues(t, tt.expected, results)
+		})
+	}
+}
+
+func TestNullBytesScanCopiesSource(t *testing.T) {
+	var n nullBytes
+	src := []byte("first")
+	assert.NoError(t, n.Scan(src))
+	copy(src, "xxxxx")
+	assert.True(t, n.Valid)
+	assert.Equal(t, "first", string(n.Bytes))
+
+	assert.NoError(t, n.Scan(nil))
+	assert.False(t, n.Valid)
+
+	assert.NoError(t, n.Scan([]byte{}))
+	assert.True(t, n.Valid)
+	assert.Empty(t, n.Bytes)
+
+	assert.Error(t, n.Scan(1))
+}
+
 func TestCreateTableOk(t *testing.T) {
 	data, mock, err := getMockData()
 	assert.NoError(t, err, "an error was not expected when opening a stub database connection")
