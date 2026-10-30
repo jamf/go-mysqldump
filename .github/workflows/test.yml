@@ -11,7 +11,7 @@ permissions:
 jobs:
   test:
     name: go test (${{ matrix.go }})
-    runs-on: [ self-hosted, jamf-ubuntu-latest ]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
