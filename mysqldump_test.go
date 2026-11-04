@@ -93,8 +93,8 @@ func RunDump(t testing.TB, data *mysqldump.Data) {
 	defer db.Close()
 
 	data.Connection = db
-	showTablesRows := sqlmock.NewRowsWithColumnDefinition(c("Tables_in_Testdb", "")).
-		AddRow("Test_Table")
+	showTablesRows := sqlmock.NewRowsWithColumnDefinition(c("Tables_in_Testdb", ""), c("Table_type", "")).
+		AddRow("Test_Table", "BASE TABLE")
 
 	showColumnsRows := mockColumnRows()
 
@@ -110,7 +110,7 @@ func RunDump(t testing.TB, data *mysqldump.Data) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(`^SELECT version\(\)$`).WillReturnRows(serverVersionRows)
-	mock.ExpectQuery(`^SHOW TABLES$`).WillReturnRows(showTablesRows)
+	mock.ExpectQuery(`^SHOW FULL TABLES$`).WillReturnRows(showTablesRows)
 	mock.ExpectExec("^LOCK TABLES `Test_Table` READ /\\*!32311 LOCAL \\*/$").WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnRows(createTableRows)
 	mock.ExpectQuery("^SHOW COLUMNS FROM `Test_Table`$").WillReturnRows(showColumnsRows)
@@ -146,8 +146,8 @@ func TestNoLockOk(t *testing.T) {
 	defer db.Close()
 
 	data.Connection = db
-	showTablesRows := sqlmock.NewRowsWithColumnDefinition(c("Tables_in_Testdb", "")).
-		AddRow("Test_Table")
+	showTablesRows := sqlmock.NewRowsWithColumnDefinition(c("Tables_in_Testdb", ""), c("Table_type", "")).
+		AddRow("Test_Table", "BASE TABLE")
 
 	showColumnsRows := mockColumnRows()
 
@@ -163,7 +163,7 @@ func TestNoLockOk(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(`^SELECT version\(\)$`).WillReturnRows(serverVersionRows)
-	mock.ExpectQuery(`^SHOW TABLES$`).WillReturnRows(showTablesRows)
+	mock.ExpectQuery(`^SHOW FULL TABLES$`).WillReturnRows(showTablesRows)
 	mock.ExpectQuery("^SHOW CREATE TABLE `Test_Table`$").WillReturnRows(createTableRows)
 	mock.ExpectQuery("^SHOW COLUMNS FROM `Test_Table`$").WillReturnRows(showColumnsRows)
 	mock.ExpectQuery("^SELECT (.+) FROM `Test_Table`$").WillReturnRows(createTableValueRows)
