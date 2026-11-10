@@ -456,7 +456,8 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 	switch tp.DatabaseTypeName() {
 	case "BLOB", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB", "BINARY", "VARBINARY":
 		return reflect.TypeOf(nullBytes{})
-	case "CHAR", "VARCHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "ENUM", "SET", "DECIMAL", "JSON":
+	case "CHAR", "VARCHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "ENUM", "SET", "DECIMAL", "JSON",
+		"DATETIME", "TIMESTAMP", "DATE":
 		return reflect.TypeOf(sql.NullString{})
 	case "BIGINT", "TINYINT", "INT":
 		return reflect.TypeOf(sql.NullInt64{})

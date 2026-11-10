@@ -389,6 +389,57 @@ func TestCreateTableEmptyValuesByColumnType(t *testing.T) {
 	}
 }
 
+func TestCreateTableDateTimeValues(t *testing.T) {
+	tests := []struct {
+		dbType   string
+		values   []interface{}
+		expected []string
+	}{
+		{"DATETIME",
+			[]interface{}{nil, "2024-01-02 03:04:05", "2026-11-05 16:37:27.830071", "0000-00-00 00:00:00"},
+			[]string{"(NULL)", "('2024-01-02 03:04:05')", "('2026-11-05 16:37:27.830071')", "('0000-00-00 00:00:00')"}},
+		{"TIMESTAMP",
+			[]interface{}{nil, "2024-01-02 03:04:05", "2026-11-05 16:37:27.830071", "0000-00-00 00:00:00"},
+			[]string{"(NULL)", "('2024-01-02 03:04:05')", "('2026-11-05 16:37:27.830071')", "('0000-00-00 00:00:00')"}},
+		{"DATE",
+			[]interface{}{nil, "2024-01-02", "2026-11-05", "0000-00-00"},
+			[]string{"(NULL)", "('2024-01-02')", "('2026-11-05')", "('0000-00-00')"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dbType, func(t *testing.T) {
+			data, mock, err := getMockData()
+			assert.NoError(t, err, "an error was not expected when opening a stub database connection")
+			defer data.Close()
+
+			cols := sqlmock.NewRows([]string{"Field", "Extra"}).
+				AddRow("v", "")
+
+			// go-sql-driver reports a NullTime struct as the scan type of date/time columns, even without parseTime.
+			col := sqlmock.NewColumn("v").OfType(tt.dbType, sql.NullTime{}).Nullable(true)
+			rows := sqlmock.NewRowsWithColumnDefinition(col)
+			for _, v := range tt.values {
+				rows.AddRow(v)
+			}
+
+			mock.ExpectQuery("^SHOW COLUMNS FROM `test`$").WillReturnRows(cols)
+			mock.ExpectQuery("^SELECT (.+) FROM `test`$").WillReturnRows(rows)
+
+			table := data.createTable("test", false)
+
+			results := make([]string, 0)
+			for table.Next() {
+				row := table.RowValues()
+				assert.NotContains(t, row, "&{")
+				results = append(results, row)
+			}
+			assert.NoError(t, table.Err)
+			assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
+			assert.EqualValues(t, tt.expected, results)
+		})
+	}
+}
+
 func TestNullBytesScanCopiesSource(t *testing.T) {
 	var n nullBytes
 	src := []byte("first")
