@@ -440,6 +440,55 @@ func TestCreateTableDateTimeValues(t *testing.T) {
 	}
 }
 
+func TestCreateTableUnsignedIntegerValues(t *testing.T) {
+	tests := []struct {
+		dbType   string
+		scanType interface{}
+		values   []interface{}
+		expected []string
+	}{
+		{"YEAR", uint16(0), []interface{}{"2024", "1901"}, []string{"('2024')", "('1901')"}},
+		{"SMALLINT", uint16(0), []interface{}{"0", "65535"}, []string{"('0')", "('65535')"}},
+		{"MEDIUMINT", uint32(0), []interface{}{"1", "16777215"}, []string{"('1')", "('16777215')"}},
+		{"INT", uint32(0), []interface{}{"7", "4294967295"}, []string{"('7')", "('4294967295')"}},
+		{"BIGINT", uint64(0), []interface{}{"9223372036854775807", "18446744073709551615"},
+			[]string{"('9223372036854775807')", "('18446744073709551615')"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.dbType, func(t *testing.T) {
+			data, mock, err := getMockData()
+			assert.NoError(t, err, "an error was not expected when opening a stub database connection")
+			defer data.Close()
+
+			cols := sqlmock.NewRows([]string{"Field", "Extra"}).
+				AddRow("v", "")
+
+			// go-sql-driver reports uint scan types for NOT NULL unsigned columns; YEAR is flagged unsigned.
+			col := sqlmock.NewColumn("v").OfType(tt.dbType, tt.scanType).Nullable(false)
+			rows := sqlmock.NewRowsWithColumnDefinition(col)
+			for _, v := range tt.values {
+				rows.AddRow(v)
+			}
+
+			mock.ExpectQuery("^SHOW COLUMNS FROM `test`$").WillReturnRows(cols)
+			mock.ExpectQuery("^SELECT (.+) FROM `test`$").WillReturnRows(rows)
+
+			table := data.createTable("test", false)
+
+			results := make([]string, 0)
+			for table.Next() {
+				row := table.RowValues()
+				assert.NotContains(t, row, "%!s")
+				results = append(results, row)
+			}
+			assert.NoError(t, table.Err)
+			assert.NoError(t, mock.ExpectationsWereMet(), "there were unfulfilled expections")
+			assert.EqualValues(t, tt.expected, results)
+		})
+	}
+}
+
 func TestNullBytesScanCopiesSource(t *testing.T) {
 	var n nullBytes
 	src := []byte("first")
