@@ -446,6 +446,9 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 	switch tp.ScanType().Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return reflect.TypeOf(sql.NullInt64{})
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		// Text keeps unsigned values above MaxInt64 exact.
+		return reflect.TypeOf(sql.NullString{})
 	case reflect.Float32, reflect.Float64:
 		return reflect.TypeOf(sql.NullFloat64{})
 	case reflect.String:
@@ -456,7 +459,8 @@ func reflectColumnType(tp *sql.ColumnType) reflect.Type {
 	switch tp.DatabaseTypeName() {
 	case "BLOB", "TINYBLOB", "MEDIUMBLOB", "LONGBLOB", "BINARY", "VARBINARY":
 		return reflect.TypeOf(nullBytes{})
-	case "CHAR", "VARCHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "ENUM", "SET", "DECIMAL", "JSON":
+	case "CHAR", "VARCHAR", "TEXT", "TINYTEXT", "MEDIUMTEXT", "LONGTEXT", "ENUM", "SET", "DECIMAL", "JSON",
+		"DATETIME", "TIMESTAMP", "DATE":
 		return reflect.TypeOf(sql.NullString{})
 	case "BIGINT", "TINYINT", "INT":
 		return reflect.TypeOf(sql.NullInt64{})
